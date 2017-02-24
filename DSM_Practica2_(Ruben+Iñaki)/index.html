@@ -36,7 +36,11 @@ function infoProducto(numeroProducto){
 }
 
 function zoomFoto(numeroProducto,numeroFoto){
+	$("#imagenGrandeProducto"+numeroProducto).fadeOut(500);
+	//$("#imagenGrandeProducto"+numeroProducto).hide();
 	$("#imagenGrandeProducto"+numeroProducto).attr("src","img/fotoProducto"+numeroProducto+"-"+numeroFoto+".jpg");
+	//$("#imagenGrandeProducto"+numeroProducto).hide();
+	$("#imagenGrandeProducto"+numeroProducto).fadeIn(500);
 }
 
 
