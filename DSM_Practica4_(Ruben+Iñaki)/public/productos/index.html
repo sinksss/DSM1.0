@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Practica 4</title>
+     <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+    
+    <!--Socket.io-->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/heroic-features.css" rel="stylesheet">
+
+</head>
+
+<body>
+<script>
+function infoProducto(numeroProducto){
+	
+	for(i=0;i<3;i++){
+		for(j=1;j<=3;j++){
+			$(".producto"+j)[i].classList.add("hidden");
+		}
+	}
+	
+	for(i=0;i<3;i++){
+		$(".producto"+numeroProducto)[i].classList.remove("hidden");
+	}
+	$("#tabDesc").click();
+}
+
+function infoProductoAJAX(){
+	
+	numeroProducto=$("#selectInfoProducto").val()*1-1;
+	
+	
+	
+	
+	$.ajax({
+                
+                url:   "/productoAJAX?id="+(numeroProducto*1+1),
+                type:  "get",
+               
+                success:  function (response) {
+                     datosProducto=response;
+					  
+	for(i=0;i<3;i++){
+		for(j=1;j<=3;j++){
+			$(".producto"+j)[i].classList.add("hidden");
+		}
+	}
+	
+	for(i=0;i<3;i++){
+		
+		
+		$(".producto"+(numeroProducto*1+1))[i].classList.remove("hidden");
+		
+		$(".producto"+(numeroProducto*1+1)).eq(i).html(datosProducto[i]);
+		
+	}
+	
+	
+	$("#tabDesc").click();
+                }
+        });
+	
+	
+	
+	
+}
+
+
+function zoomFoto(numeroProducto,numeroFoto){
+	$("#imagenGrandeProducto"+numeroProducto).fadeOut(500);
+	//$("#imagenGrandeProducto"+numeroProducto).hide();
+	$("#imagenGrandeProducto"+numeroProducto).attr("src","img/fotoProducto"+numeroProducto+"-"+numeroFoto+".jpg");
+	//$("#imagenGrandeProducto"+numeroProducto).hide();
+	$("#imagenGrandeProducto"+numeroProducto).fadeIn(500);
+}
+
+
+var cantidadEnCarrito = [0,0,0];
+
+
+function addToChart(numeroProducto){
+	//Añadir al vector al clicar en añadir de cada producto
+	cantidadEnCarrito[numeroProducto-1]=(cantidadEnCarrito[numeroProducto-1]*1+$("#cantidad"+numeroProducto).val()*1);
+	
+	actualizarCarrito();
+}
+
+
+function actualizarCarrito(){
+	//Al cambiar el vector se actualiza la cantidad en el carrito
+	$("#cantidadCarritoP1").val(cantidadEnCarrito[0]);
+	$("#cantidadCarritoP2").val(cantidadEnCarrito[1]);
+	$("#cantidadCarritoP3").val(cantidadEnCarrito[2]);
+	
+	$("#precioTotalP1").html(Math.round(($("#precioP1").html()*$("#cantidadCarritoP1").val()) * 100) / 100);
+	$("#precioTotalP2").html(Math.round(($("#precioP2").html()*$("#cantidadCarritoP2").val()) * 100) / 100);
+	$("#precioTotalP3").html(Math.round(($("#precioP3").html()*$("#cantidadCarritoP3").val()) * 100) / 100);
+	
+	
+	$("#subTotal").html(Math.round(($("#precioTotalP1").html()*1+$("#precioTotalP2").html()*1+$("#precioTotalP3").html()*1) * 100) / 100);
+	$("#precioTotal").html(Math.round(($("#precioTotalP1").html()*1+$("#precioTotalP2").html()*1+$("#precioTotalP3").html()*1+$("#costeEnvio").html()*1) * 100) / 100);
+	
+	if(cantidadEnCarrito[0]>0){
+		$("#producto1Carrito").removeClass("hidden");
+	}else{
+		$("#producto1Carrito").addClass("hidden");
+	}
+	
+	if(cantidadEnCarrito[1]>0){
+		$("#producto2Carrito").removeClass("hidden");
+	}else{
+		$("#producto2Carrito").addClass("hidden");
+	}
+	
+	if(cantidadEnCarrito[2]>0){
+		$("#producto3Carrito").removeClass("hidden");
+	}else{
+		$("#producto3Carrito").addClass("hidden");
+	}
+	
+	
+	if(cantidadEnCarrito[0]==0 && cantidadEnCarrito[1]==0 && cantidadEnCarrito[2]==0){
+		$("#carritoVacio").removeClass("hidden");
+	}else{
+		$("#carritoVacio").addClass("hidden");
+	}
+	
+}
+
+function cantidadCambiadaCarrito(){
+	//Actualiza el vector tras cambiar cantidades en el carrito
+	cantidadEnCarrito[0]=$("#cantidadCarritoP1").val()*1;
+	cantidadEnCarrito[1]=$("#cantidadCarritoP2").val()*1;
+	cantidadEnCarrito[2]=$("#cantidadCarritoP3").val()*1;
+	actualizarCarrito();
+	
+}
+
+function vaciarCarrito(numeroProducto){
+	cantidadEnCarrito[numeroProducto-1]=0;
+	actualizarCarrito();
+}
+
+
+function comprarAhora(numeroProducto){
+
+	for(i=0;i<3;i++){
+		for(j=1;j<=3;j++){
+			$(".producto"+j)[i].classList.add("hidden");
+		}
+	}
+	
+	for(i=0;i<3;i++){
+		$(".producto"+numeroProducto)[i].classList.remove("hidden");
+	}
+	$("#tabPrecio").click();
+	
+}
+
+
+
+
+/////////////CHAT//////////////////
+
+var socket = io();
+
+socket.on('mensajeschat', function(datos) {
+	
+	$('#mensajesChat').html($('#mensajesChat').html()+datos.info+'<br>');
+});
+$(document).ready(function() {
+	$('#chatformu').submit(function(e){
+		var mensaje =  $('#chatmensaje').val();
+		socket.emit('mensajeschat', {info: mensaje});
+		$('#mensajesChat').html($('#mensajesChat').html()+$('#chatmensaje').val()+'<br>');
+		$('#chatmensaje').val('');
+		
+	});
+});
+
+
+
+
+</script>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Tienda DSM</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="#">Acerca de</a>
+                    </li>
+                    <li>
+                        <a href="#">Servicios</a>
+                    </li>
+                    <li>
+                        <a href="#">Contacto</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container">
+
+        <!-- Jumbotron Header -->
+        <header class="jumbotron hero-spacer">
+            <h1>Bienvenidos a la Tienda</h1>
+            <p>
+            </p>
+        </header>
+
+        <hr>
+
+        <!-- Title -->
+        <div class="row">
+            <div class="col-lg-12">
+                <h3>Últimos productos</h3>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <!-- Page Features -->
+        <div class="row text-center">
+
+            <div class="col-md-4 col-sm-6 hero-feature">
+                <div class="thumbnail">
+                    <a href="/producto?id=1"><img src="img/fotoProducto1-1.jpg" alt=""></a>
+                    <div class="caption">
+                        <h3>Peluche Pikachu</h3>
+                        <p>De 35cm de altura. Suave.</p>
+                        <p>
+                            <a href="#dynamicTabs" onClick="comprarAhora(1);" class="btn btn-primary">Comprar ahora!</a> <a href="#dynamicTabs" onClick="infoProducto(1)" class="btn btn-default">Más Info</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6 hero-feature">
+                <div class="thumbnail">
+                   <a href="/producto?id=2"><img src="img/fotoProducto2-1.jpg" alt=""></a>
+                    <div class="caption">
+                        <h3>Cinco cabezales cepillo de dientes</h3>
+                        <p>Colores del pack: amarillo, azul, verde, blanco y rosa.</p>
+                        <p>
+                            <a href="#dynamicTabs" onClick="comprarAhora(2)" class="btn btn-primary">Comprar ahora!</a> <a href="#dynamicTabs" onClick="infoProducto(2)" class="btn btn-default">Más Info</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6 hero-feature">
+                <div class="thumbnail">
+                   <a href="/producto?id=3"><img src="img/fotoProducto3-1.jpg" alt=""></a>
+                    <div class="caption">
+                        <h3>Tostadora eléctrica</h3>
+                        <p>Dispone de dos ranuras y control de potencia variable.</p>
+                        <p>
+                            <a href="#dynamicTabs" onClick="comprarAhora(3)" class="btn btn-primary">Comprar ahora!</a> <a href="#dynamicTabs" onClick="infoProducto(3)" class="btn btn-default">Más Info</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+          </div>
+<div class="row">
+      <div class="col-md-6 col-md-offset-3">
+        <div class="well well-sm">
+          <form class="form-horizontal" id="chatformu" action="javascript:void(0)" method="get">
+          <fieldset>
+            <legend class="text-center">Chat</legend>
+    		
+            <!-- Message body -->
+            <div class="form-group">
+              <label class="col-md-3 control-label" style="color:black;" for="message">Chat</label>
+              <div class="col-md-9" id="mensajesChat">
+                
+              </div>
+            </div>
+            
+    
+            <!-- Message body -->
+            <div class="form-group">
+              <label class="col-md-3 control-label" style="color:black;" for="message">Your message</label>
+              <div class="col-md-9">
+                <textarea class="form-control" id="chatmensaje" name="message" placeholder="Please enter your message here..." rows="5"></textarea>
+              </div>
+            </div>
+            
+            
+    
+            <!-- Form actions -->
+            <div class="form-group">
+              <div class="col-md-12 text-right">
+                <button type="submit" class="btn btn-primary btn-lg">Submit</button>
+              </div>
+            </div>
+          </fieldset>
+          </form>
+        </div>
+      </div>
+	</div>
+
+<div class="row">
+	<select onChange="infoProductoAJAX()" id="selectInfoProducto" name="select_producto">
+    	<option name="selecciona" value="0">Selecciona Producto</option>
+    	<option name="producto1" value="1">Peluche pikachu</option>
+        <option name="producto2" value="2">Cabezales cepillo</option>
+        <option name="producto3" value="3">Tostadora</option>
+    </select>
+</div>
+
+<div class="row">
+                
+  <h3 id="dynamicTabs">Información</h3>
+  <ul class="nav nav-tabs">
+    <li class="active"><a data-toggle="tab" id="tabDesc" href="#menu1">Descripción</a></li>
+    <li><a data-toggle="tab" id="tabFotos" href="#menu2">Fotos</a></li>
+    <li><a data-toggle="tab" id="tabPrecio" href="#menu3">Comprar</a></li>
+  </ul>
+  
+  
+  <div class="tab-content">
+    <div id="menu1" class="tab-pane fade in active">
+      <div class="producto1 hidden">
+		
+      </div>
+      <div class="producto2 hidden">
+		
+      </div>
+      <div class="producto3 hidden">
+		
+      </div>
+    </div>
+    <div id="menu2" class="tab-pane fade">
+      <div class="producto1 hidden">
+	
+      </div>
+      <div class="producto2 hidden">
+		
+      </div>
+      <div class="producto3 hidden">
+		
+      </div>
+    </div>
+    <div id="menu3" class="tab-pane fade">
+      <div class="producto1 hidden">
+		
+      </div>
+      <div class="producto2 hidden">
+		
+      </div>
+      <div class="producto3 hidden">
+		
+      </div>
+    </div>
+    
+  </div>
+</div>
+<div class="row"><div class="col-xs-12" style="height:70px;"></div></div>
+<div class="row">
+<h2><span class="glyphicon glyphicon-shopping-cart" aria-hidden="true"></span> Carrito de compra </h2>
+        <div class="col-sm-12 col-md-10 col-md-offset-1">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th class="text-center">Precio</th>
+                        <th class="text-center">Total</th>
+                        <th> </th>
+                    </tr>
+                </thead>
+                <tbody>
+                	<tr id="carritoVacio">
+                    	<td class="col-sm-8 col-md-6">
+                    		<h3>Carrito vacio</h3>
+                    	</td>
+                    </tr>
+                    <tr id="producto1Carrito" class="hidden">
+                        <td class="col-sm-8 col-md-6">
+                        <div class="media">
+                            <a class="thumbnail pull-left" href="#"> <img class="media-object" src="http://icons.iconarchive.com/icons/custom-icon-design/flatastic-2/72/product-icon.png" style="width: 72px; height: 72px;"> </a>
+                            <div class="media-body">
+                                <h4 class="media-heading"><a href="#">Peluche pikachu</a></h4>
+                                <h5 class="media-heading"> by <a href="#">The Pokemon Company</a></h5>
+                                <span>Estado: </span><span class="text-success"><strong>En Stock</strong></span>
+                            </div>
+                        </div></td>
+                        <td class="col-sm-1 col-md-1" style="text-align: center">
+                        <input type="email" class="form-control" id="cantidadCarritoP1" onChange="cantidadCambiadaCarrito()" value="0">
+                        </td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioP1">6.78</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioTotalP1">0</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1">
+                        <button type="button" class="btn btn-danger" onClick="vaciarCarrito(1)">
+                            <span class="glyphicon glyphicon-remove"></span> Quitar
+                        </button></td>
+                    </tr>
+                    <tr id="producto2Carrito" class="hidden">
+                        <td class="col-sm-8 col-md-6">
+                        <div class="media">
+                            <a class="thumbnail pull-left" href="#"> <img class="media-object" src="http://icons.iconarchive.com/icons/custom-icon-design/flatastic-2/72/product-icon.png" style="width: 72px; height: 72px;"> </a>
+                            <div class="media-body">
+                                <h4 class="media-heading"><a href="#">Cabezales cepillo</a></h4>
+                                <h5 class="media-heading"> by <a href="#">Pro Hyper Mega Dentist</a></h5>
+                                <span>Estado: </span><span class="text-success"><strong>En Stock</strong></span>
+                            </div>
+                        </div></td>
+                        <td class="col-sm-1 col-md-1" style="text-align: center">
+                        <input type="email" class="form-control" id="cantidadCarritoP2" onChange="cantidadCambiadaCarrito()" value="0">
+                        </td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioP2">0.99</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioTotalP2">0</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1">
+                        <button type="button" class="btn btn-danger" onClick="vaciarCarrito(2)">
+                            <span class="glyphicon glyphicon-remove"></span> Quitar
+                        </button></td>
+                    </tr>
+                    <tr id="producto3Carrito" class="hidden">
+                        <td class="col-sm-8 col-md-6">
+                        <div class="media">
+                            <a class="thumbnail pull-left" href="#"> <img class="media-object" src="http://icons.iconarchive.com/icons/custom-icon-design/flatastic-2/72/product-icon.png" style="width: 72px; height: 72px;"> </a>
+                            <div class="media-body">
+                                <h4 class="media-heading"><a href="#">Tostadora Eléctrica</a></h4>
+                                <h5 class="media-heading"> by <a href="#">Pro Hyper Mega Gadget</a></h5>
+                                <span>Estado: </span><span class="text-success"><strong>En Stock</strong></span>
+                            </div>
+                        </div></td>
+                        <td class="col-sm-1 col-md-1" style="text-align: center">
+                        <input type="email" class="form-control" id="cantidadCarritoP3" onChange="cantidadCambiadaCarrito()" value="0">
+                        </td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioP3">12.65</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1 text-center"><strong><span id="precioTotalP3">0</span>€</strong></td>
+                        <td class="col-sm-1 col-md-1">
+                        <button type="button" class="btn btn-danger" onClick="vaciarCarrito(3)">
+                            <span class="glyphicon glyphicon-remove"></span> Quitar
+                        </button></td>
+                    </tr>
+                    <tr>
+                        <td>   </td>
+                        <td>   </td>
+                        <td>   </td>
+                        <td><h5>Subtotal</h5></td>
+                        <td class="text-right"><h5><strong><span id="subTotal">0</span>€</strong></h5></td>
+                    </tr>
+                    <tr>
+                        <td>   </td>
+                        <td>   </td>
+                        <td>   </td>
+                        <td><h5>Costes de envío</h5></td>
+                        <td class="text-right"><h5><strong><span id="costeEnvio">5</span>€</strong></h5></td>
+                    </tr>
+                    <tr>
+                        <td>   </td>
+                        <td>   </td>
+                        <td>   </td>
+                        <td><h3>Total</h3></td>
+                        <td class="text-right"><h3><strong><span id="precioTotal">5</span>€</strong></h3></td>
+                    </tr>
+                    <tr>
+                        <td>   </td>
+                        <td>   </td>
+                        <td>   </td>
+                        <td>
+                        <button type="button" class="btn btn-default">
+                            <span class="glyphicon glyphicon-shopping-cart"></span> Continuar comprando
+                        </button></td>
+                        <td>
+                        <button type="button" class="btn btn-success">
+                            Validar compra <span class="glyphicon glyphicon-play"></span>
+                        </button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+        
+        <!-- /.row -->
+
+        <hr>
+
+        <!-- Footer -->
+        <footer>
+ 
+        </footer>
+
+    </div>
+    <!-- /.container -->
+
+   
+
+
+</body>
+
+</html>
